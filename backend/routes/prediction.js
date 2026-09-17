@@ -17,9 +17,18 @@ const router = express.Router();
 
 
 // FILE UPLOAD CONFIGURATION
-
-
+ 
+/**
+ * Disk storage configuration for Multer.
+ * Ensures the uploads directory exists and creates unique timestamped filenames.
+ */
 const storage = multer.diskStorage({
+  /**
+   * Defines the target folder on disk where files should be stored.
+   * @param {import('express').Request} req - Express request
+   * @param {Express.Multer.File} file - Uploaded file metadata
+   * @param {Function} cb - Multer callback(err, destinationPath)
+   */
   destination: (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../uploads');
     if (!fs.existsSync(uploadDir)) {
@@ -27,6 +36,12 @@ const storage = multer.diskStorage({
     }
     cb(null, uploadDir);
   },
+  /**
+   * Generates a safe, non-colliding filename for the uploaded scan.
+   * @param {import('express').Request} req - Express request
+   * @param {Express.Multer.File} file - Uploaded file metadata
+   * @param {Function} cb - Multer callback(err, generatedFilename)
+   */
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     const ext = path.extname(file.originalname);
@@ -34,7 +49,13 @@ const storage = multer.diskStorage({
   },
 });
 
-// Accept PNG and JPEG images
+/**
+ * File filter validator to restrict uploads to supported medical image formats (PNG, JPG, JPEG).
+ *
+ * @param {import('express').Request} req - Express request
+ * @param {Express.Multer.File} file - Uploaded file descriptor
+ * @param {Function} cb - Multer callback(err, acceptFileBoolean)
+ */
 const fileFilter = (req, file, cb) => {
   const allowed = ['image/jpeg', 'image/jpg', 'image/png'];
   if (allowed.includes(file.mimetype)) {
@@ -44,6 +65,9 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
+/**
+ * Multer middleware instance with file size and type boundaries.
+ */
 const upload = multer({
   storage,
   fileFilter,
@@ -51,12 +75,19 @@ const upload = multer({
 });
 
 
-// PREDICTION ENDPOINT  (REAL AI)
+// PREDICTION ENDPOINT (REAL AI)
 
 
 /**
  * POST /api/predict
- * Upload CT scan image → get real Gemini Vision analysis
+ * Uploads a chest CT scan slice, triggers Gemini Vision AI radiological analysis,
+ * and returns structured clinical observations, malignancy risk, and Fleischner recommendations.
+ *
+ * @name predictCTScan
+ * @function
+ * @param {import('express').Request} req - Express request containing multipart file `image`
+ * @param {import('express').Response} res - Express JSON response with prediction object
+ * @returns {Promise<void>}
  */
 router.post('/predict', upload.single('image'), async (req, res) => {
   let savedFilePath = null;
@@ -131,7 +162,14 @@ router.post('/predict', upload.single('image'), async (req, res) => {
 
 /**
  * GET /api/predictions
- * Returns list of previously uploaded scans.
+ * Retrieves the historical log of uploaded scans stored on disk,
+ * sorted newest-first with timestamps and sizes.
+ *
+ * @name getPredictionsHistory
+ * @function
+ * @param {import('express').Request} req - Express request
+ * @param {import('express').Response} res - Express response with list of scan records
+ * @returns {void}
  */
 router.get('/predictions', (req, res) => {
   try {
@@ -166,6 +204,18 @@ router.get('/predictions', (req, res) => {
 // MULTER ERROR HANDLING
 
 
+/**
+ * Dedicated error-handling middleware for Multer file upload exceptions.
+ * Converts Multer-specific error codes (e.g., LIMIT_FILE_SIZE) into friendly 400 Bad Request responses.
+ *
+ * @name multerErrorHandler
+ * @function
+ * @param {Error} error - Upload exception
+ * @param {import('express').Request} req - Express request
+ * @param {import('express').Response} res - Express response
+ * @param {import('express').NextFunction} next - Express next middleware function
+ * @returns {void}
+ */
 router.use((error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {

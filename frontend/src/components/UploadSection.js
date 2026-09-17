@@ -8,6 +8,14 @@ import React, { useState, useRef, useCallback } from 'react';
 const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 const MAX_SIZE_MB = 10;
 
+/**
+ * Validates selected file MIME type and maximum file size (10MB limit).
+ *
+ * @name validateFile
+ * @function
+ * @param {File} file - Browser File object
+ * @returns {string | null} Error string if validation fails, or null if valid
+ */
 const validateFile = (file) => {
   if (!ALLOWED_TYPES.includes(file.type)) {
     return 'Invalid file type. Please upload a PNG or JPG image.';
@@ -18,6 +26,17 @@ const validateFile = (file) => {
   return null;
 };
 
+/**
+ * UPLOAD SECTION COMPONENT
+ * Provides drag-and-drop CT scan upload zone, local thumbnail preview,
+ * progress tracking, and validation before sending to the backend AI analysis pipeline.
+ *
+ * @component
+ * @param {Object} props
+ * @param {(file: File, onProgress: (percent: number) => void) => Promise<void>} props.onUpload - Upload callback
+ * @param {boolean} props.isLoading - Whether an upload/inference operation is actively processing
+ * @returns {JSX.Element}
+ */
 const UploadSection = ({ onUpload, isLoading }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -25,6 +44,11 @@ const UploadSection = ({ onUpload, isLoading }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
 
+  /**
+   * Processes and validates a user-selected file, generating a base64 preview thumbnail.
+   *
+   * @param {File} file - Selected image file
+   */
   const handleFileSelect = useCallback((file) => {
     const error = validateFile(file);
     if (error) {
@@ -37,21 +61,37 @@ const UploadSection = ({ onUpload, isLoading }) => {
     reader.readAsDataURL(file);
   }, []);
 
+  /**
+   * Triggers file processing when selected via the standard file input browser picker.
+   * @param {React.ChangeEvent<HTMLInputElement>} e
+   */
   const handleInputChange = (e) => {
     const file = e.target.files[0];
     if (file) handleFileSelect(file);
   };
 
+  /**
+   * Prevents default drag behavior and sets visual drag-over state.
+   * @param {React.DragEvent} e
+   */
   const handleDragOver = (e) => {
     e.preventDefault();
     setDragOver(true);
   };
 
+  /**
+   * Resets visual drag-over state when the cursor leaves the drop target.
+   * @param {React.DragEvent} e
+   */
   const handleDragLeave = (e) => {
     e.preventDefault();
     setDragOver(false);
   };
 
+  /**
+   * Extracts dropped file from event dataTransfer and initiates validation.
+   * @param {React.DragEvent} e
+   */
   const handleDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
@@ -59,6 +99,9 @@ const UploadSection = ({ onUpload, isLoading }) => {
     if (file) handleFileSelect(file);
   };
 
+  /**
+   * Triggers the parent onUpload callback with the selected file and progress handler.
+   */
   const handleAnalyze = () => {
     if (selectedFile && onUpload) {
       setUploadProgress(0);
@@ -66,6 +109,9 @@ const UploadSection = ({ onUpload, isLoading }) => {
     }
   };
 
+  /**
+   * Resets active file selection, thumbnail preview, and file input element.
+   */
   const handleClear = () => {
     setSelectedFile(null);
     setPreview(null);

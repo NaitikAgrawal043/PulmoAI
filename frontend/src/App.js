@@ -15,6 +15,14 @@ import './styles/ModernApp.css';
 // ERROR CARD — shows smart error messages
 
 
+/**
+ * Classifies an error message into a structured error category for actionable user remediation.
+ *
+ * @name classifyError
+ * @function
+ * @param {string} msg - Raw error message received from API or browser
+ * @returns {'rateLimit' | 'noApiKey' | 'badApiKey' | 'generic'} Categorized error type
+ */
 function classifyError(msg) {
   if (!msg) return 'generic';
   const m = msg.toLowerCase();
@@ -27,6 +35,14 @@ function classifyError(msg) {
   return 'generic';
 }
 
+/**
+ * Renders an informative, actionable alert card explaining API key or rate limit errors.
+ *
+ * @name ErrorCard
+ * @component
+ * @param {{ message: string }} props - Component props containing error message
+ * @returns {JSX.Element} Structured error card with troubleshooting instructions
+ */
 function ErrorCard({ message }) {
   const type = classifyError(message);
 
@@ -89,6 +105,15 @@ function ErrorCard({ message }) {
 // MAIN APP
 
 
+/**
+ * PulmoAI Root Application Component.
+ * Manages global application state including navigation, CT scan upload results,
+ * loading indicators, theme toggles, and backend health status.
+ *
+ * @name App
+ * @component
+ * @returns {JSX.Element} Rendered application shell
+ */
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [result, setResult] = useState(null);
@@ -99,19 +124,27 @@ function App() {
     return localStorage.getItem('pulmoai_theme') || 'light';
   });
 
+  // Sync theme with HTML data-theme attribute and localStorage
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('pulmoai_theme', theme);
   }, [theme]);
 
+  /**
+   * Toggles interface appearance between light mode and dark mode.
+   */
   const toggleTheme = () => {
     setTheme(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
+  // Perform initial health check on component mount
   useEffect(() => {
     checkBackendHealth();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /**
+   * Pings the backend health endpoint to detect if Node.js server is online.
+   */
   const checkBackendHealth = async () => {
     try {
       await checkHealth();
@@ -121,12 +154,25 @@ function App() {
     }
   };
 
+  /**
+   * Handles top-level page routing between 'home', 'scan', and 'results'.
+   * Resets active errors upon navigation.
+   *
+   * @param {'home' | 'scan' | 'results'} page - Target page name
+   */
   const handleNavigate = (page) => {
     setCurrentPage(page);
     setResult(null);
     setError(null);
   };
 
+  /**
+   * Orchestrates CT scan image upload, tracking upload progress,
+   * triggering Vision AI analysis, and transitioning to results view.
+   *
+   * @param {File} file - Selected CT scan or DICOM image file
+   * @param {Function} onProgress - Percentage completion callback (0-100)
+   */
   const handleUpload = async (file, onProgress) => {
     setIsLoading(true);
     setError(null);

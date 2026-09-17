@@ -74,15 +74,13 @@ export const getPredictionHistory = async () => {
 
 
 /**
- * Send message to chatbot
- * @param {string} message - User's question
- * @returns {Promise} Chatbot response
- */
-/**
- * Send message to chatbot with conversation history for context
- * @param {string} message - User's question
- * @param {Array} history - Previous conversation turns [{role, text}]
- * @returns {Promise} Chatbot response
+ * Sends a query to the medical chatbot along with past conversation history.
+ *
+ * @name sendChatMessage
+ * @function
+ * @param {string} message - User's medical question
+ * @param {Array<{ type: string, text: string }>} [history=[]] - Previous conversation turns
+ * @returns {Promise<{ success: boolean, reply: string, engine: string }>} Server response
  */
 export const sendChatMessage = async (message, history = []) => {
   try {

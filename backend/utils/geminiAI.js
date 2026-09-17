@@ -40,6 +40,14 @@ const CHAT_MODELS = [
 // HELPERS
 
 
+/**
+ * Determines whether an error emitted by the Gemini SDK represents a quota/rate-limit error (HTTP 429).
+ *
+ * @name isQuotaError
+ * @function
+ * @param {Error} err - Error object thrown by the GoogleGenerativeAI client
+ * @returns {boolean} True if the error is rate-limit or quota related
+ */
 function isQuotaError(err) {
     return err.message.includes('429') ||
         err.message.includes('Too Many') ||
@@ -47,12 +55,29 @@ function isQuotaError(err) {
         err.message.includes('RESOURCE_EXHAUSTED');
 }
 
+/**
+ * Determines whether an error indicates that the requested model version was not found (HTTP 404).
+ *
+ * @name isNotFoundError
+ * @function
+ * @param {Error} err - Error object thrown by the client
+ * @returns {boolean} True if the model identifier does not exist or is deprecated
+ */
 function isNotFoundError(err) {
     return err.message.includes('404') || err.message.includes('not found');
 }
 
 /**
- * Try each model in turn; skip to the next on quota/404 errors.
+ * Executes an AI operation across a prioritized cascade list of Gemini models.
+ * Automatically fails over to the next candidate model if a rate limit or 404 is encountered.
+ *
+ * @name tryModels
+ * @function
+ * @template T
+ * @param {string[]} models - Ordered array of Gemini model identifier strings
+ * @param {(model: import('@google/generative-ai').GenerativeModel, modelName: string) => Promise<T>} fn - Callback executing the AI generation
+ * @returns {Promise<{ result: T, modelName: string }>} Successful generation output and name of model utilized
+ * @throws {Error} If all models in the cascade are exhausted or on non-quota critical errors
  */
 async function tryModels(models, fn) {
     const errors = [];
@@ -186,7 +211,15 @@ BEHAVIOR RULES (Medical-Chatbot RAG Standard):
 7. Context-awareness: Use conversation history to resolve follow-ups naturally.`;
 
 /**
- * Get an intelligent chatbot response using the best available model.
+ * Generates an intelligent clinical chatbot response via Google Gemini.
+ * Formats multi-turn conversation history into Gemini chat turns, enforcing strict medical-radiological rules.
+ *
+ * @name getChatbotResponse
+ * @function
+ * @param {string} userMessage - User's clinical or radiological inquiry
+ * @param {Array<{ role: string, text: string }>} [conversationHistory=[]] - Previous message turns
+ * @returns {Promise<string>} AI-generated response text
+ * @throws {Error} If GEMINI_API_KEY is not configured or all models fail
  */
 async function getChatbotResponse(userMessage, conversationHistory = []) {
     if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'YOUR_GEMINI_API_KEY_HERE') {
@@ -211,10 +244,27 @@ async function getChatbotResponse(userMessage, conversationHistory = []) {
 // UTILITIES
 
 
+/**
+ * Helper to ensure a valid non-empty string or return a safe fallback default.
+ *
+ * @name str
+ * @function
+ * @param {*} val - Value to check
+ * @param {string} fallback - Default string if val is undefined, null, or whitespace
+ * @returns {string} Cleaned string or fallback
+ */
 function str(val, fallback) {
     return typeof val === 'string' && val.trim() ? val.trim() : fallback;
 }
 
+/**
+ * Returns standardized, safe clinical follow-up recommendations for pulmonary cases.
+ * Used when the AI output omits specific recommendations.
+ *
+ * @name defaultRecommendations
+ * @function
+ * @returns {string[]} Array of clinical follow-up guidelines
+ */
 function defaultRecommendations() {
     return [
         'Consult with a pulmonologist for proper evaluation',
@@ -224,6 +274,15 @@ function defaultRecommendations() {
     ];
 }
 
+/**
+ * Heuristic fallback parser invoked if Gemini returns plain text rather than structured JSON.
+ * Scans radiological keywords (benign, malignant, cancer) to assemble a valid prediction object.
+ *
+ * @name extractFallback
+ * @function
+ * @param {string} text - Raw unstructured model output text
+ * @returns {Object} Normalized prediction object matching the standard schema
+ */
 function extractFallback(text) {
     const lower = text.toLowerCase();
     let result = 'Indeterminate - Further Evaluation Required', riskLevel = 'moderate', confidence = 74;

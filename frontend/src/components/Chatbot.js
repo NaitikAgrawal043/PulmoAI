@@ -51,6 +51,17 @@ const DEFAULT_PROMPTS = [
   }
 ];
 
+/**
+ * MEDPULSE AI - RAG CHATBOT COMPONENT
+ * Renders the clinical conversational interface with dual display modes:
+ *  - Floating compressed window (ideal for quick questions while viewing CT scans)
+ *  - Full-screen expanded studio view with session sidebar, history search, and multi-turn threads
+ *
+ * @component
+ * @param {Object} props
+ * @param {Object} [props.analysisResult] - Optional current CT scan prediction context
+ * @returns {JSX.Element}
+ */
 const Chatbot = ({ analysisResult }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -109,7 +120,9 @@ const Chatbot = ({ analysisResult }) => {
     }
   }, [isOpen, isExpanded]);
 
-  // Create a new consultation chat
+  /**
+   * Initializes a new clinical consultation thread with a welcome prompt.
+   */
   const handleNewChat = () => {
     const newId = Date.now().toString();
     const initialMsg = {
@@ -130,14 +143,23 @@ const Chatbot = ({ analysisResult }) => {
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  // Switch to an existing chat
+  /**
+   * Switches active viewport to an existing consultation session from sidebar history.
+   *
+   * @param {{ id: string, title: string, messages: Array }} chat - Session object
+   */
   const handleSelectChat = (chat) => {
     setActiveChatId(chat.id);
     setMessages(chat.messages || []);
     setTimeout(() => inputRef.current?.focus(), 50);
   };
 
-  // Delete chat
+  /**
+   * Permanently deletes a consultation session from history and localStorage.
+   *
+   * @param {React.MouseEvent} e - Click event
+   * @param {string} chatId - Unique ID of chat to delete
+   */
   const handleDeleteChat = (e, chatId) => {
     e.stopPropagation();
     const updated = chats.filter(c => c.id !== chatId);
@@ -152,7 +174,12 @@ const Chatbot = ({ analysisResult }) => {
     }
   };
 
-  // Send message
+  /**
+   * Sends user query to the backend RAG pipeline, updates state with user and assistant turns,
+   * dynamically updates thread title, and records the responding AI engine.
+   *
+   * @param {string | null} [textToSend=null] - Optional override text (e.g. from suggestion buttons)
+   */
   const handleSendMessage = async (textToSend = null) => {
     const query = (textToSend !== null ? textToSend : inputMessage).trim();
     if (!query || isTyping) return;
@@ -211,7 +238,12 @@ const Chatbot = ({ analysisResult }) => {
     }
   };
 
-  // Copy message text
+  /**
+   * Copies clinical message content to system clipboard with temporary visual feedback.
+   *
+   * @param {string} text - Message text to copy
+   * @param {number} index - Index of message in active thread
+   */
   const handleCopyText = (text, index) => {
     navigator.clipboard.writeText(text);
     setCopiedIndex(index);
@@ -224,7 +256,12 @@ const Chatbot = ({ analysisResult }) => {
     c.messages.some(m => m.content.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  // Render markdown paragraphs and lists cleanly
+  /**
+   * Parses markdown-like text elements (bullet points, headers, bold) into clean React DOM elements.
+   *
+   * @param {string} content - Raw message text with markdown styling
+   * @returns {JSX.Element[]} Rendered DOM nodes
+   */
   const renderFormattedContent = (content) => {
     const lines = content.split('\n');
     return lines.map((line, idx) => {
@@ -247,6 +284,12 @@ const Chatbot = ({ analysisResult }) => {
     });
   };
 
+  /**
+   * Replaces markdown bold (**text**) and italic (*text*) syntax with semantic HTML tags.
+   *
+   * @param {string} str - Raw string
+   * @returns {string} HTML string with strong and em tags
+   */
   const formatBold = (str) => {
     return str
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')

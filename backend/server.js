@@ -39,7 +39,14 @@ app.use(express.urlencoded({ extended: true }));
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Request logging middleware
+/**
+ * Request logging middleware: Logs incoming HTTP method, URL path, and ISO timestamp.
+ * Useful for debugging and tracking API traffic in production.
+ *
+ * @param {import('express').Request} req - Express request object
+ * @param {import('express').Response} res - Express response object
+ * @param {import('express').NextFunction} next - Express next middleware function
+ */
 app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
@@ -49,7 +56,17 @@ app.use((req, res, next) => {
 // ROUTES
 
 
-// Health check endpoint
+/**
+ * GET /api/health
+ * Server health check endpoint.
+ * Returns basic uptime and availability status for monitoring tools.
+ *
+ * @name getHealth
+ * @function
+ * @param {import('express').Request} req - Express request object
+ * @param {import('express').Response} res - Express response object
+ * @returns {void}
+ */
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -58,13 +75,22 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Prediction routes (CT scan analysis)
+// Prediction routes (CT scan analysis & history)
 app.use('/api', predictionRoutes);
 
-// Chatbot routes (medical Q&A)
+// Chatbot routes (medical Q&A via RAG & Gemini)
 app.use('/api', chatbotRoutes);
 
-// 404 handler for undefined routes
+/**
+ * 404 Catch-all handler for undefined endpoints.
+ * Catches any HTTP requests that do not match configured routes.
+ *
+ * @name notFoundHandler
+ * @function
+ * @param {import('express').Request} req - Express request object
+ * @param {import('express').Response} res - Express response object
+ * @returns {void}
+ */
 app.use((req, res) => {
   res.status(404).json({
     error: 'Route not found',
@@ -76,6 +102,18 @@ app.use((req, res) => {
 // ERROR HANDLING MIDDLEWARE
 
 
+/**
+ * Global application error handling middleware.
+ * Intercepts unhandled errors thrown in route handlers and formats a clean JSON error response.
+ *
+ * @name errorHandler
+ * @function
+ * @param {Error} err - The error object thrown
+ * @param {import('express').Request} req - Express request object
+ * @param {import('express').Response} res - Express response object
+ * @param {import('express').NextFunction} next - Express next middleware function
+ * @returns {void}
+ */
 app.use((err, req, res, next) => {
   console.error('Error:', err.stack);
 
@@ -89,6 +127,9 @@ app.use((err, req, res, next) => {
 // START SERVER
 
 
+/**
+ * Starts the HTTP server on the configured port.
+ */
 app.listen(PORT, () => {
   console.log('\n╔════════════════════════════════════════════════════════════╗');
   console.log('║   PULMONARY NODULE DETECTION - BACKEND SERVER             ║');
@@ -103,12 +144,17 @@ app.listen(PORT, () => {
   console.log('╚════════════════════════════════════════════════════════════╝\n');
 });
 
-// Graceful shutdown
+/**
+ * Handle SIGTERM signal for graceful container/process shutdown.
+ */
 process.on('SIGTERM', () => {
   console.log('\n🛑 SIGTERM received. Shutting down gracefully...');
   process.exit(0);
 });
 
+/**
+ * Handle SIGINT (Ctrl+C) signal for graceful terminal shutdown.
+ */
 process.on('SIGINT', () => {
   console.log('\n🛑 SIGINT received. Shutting down gracefully...');
   process.exit(0);

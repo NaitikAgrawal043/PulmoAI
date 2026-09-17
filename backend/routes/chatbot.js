@@ -81,6 +81,15 @@ const defaultFallbackResponse =
   "I'm sorry, I couldn't process that with the AI engine right now. " +
   'Please ask about lung nodules, symptoms, treatments, CT scans, or prevention strategies.';
 
+/**
+ * Retrieves a rule-based clinical canned answer matching user keywords.
+ * Serves as an offline safeguard when neither the Python RAG microservice nor the Gemini API are reachable.
+ *
+ * @name getRuleBasedResponse
+ * @function
+ * @param {string} message - Raw question asked by the user
+ * @returns {string} Curated clinical response or default assistance disclaimer
+ */
 function getRuleBasedResponse(message) {
   const lower = message.toLowerCase().trim();
   for (const entry of knowledgeBase) {
@@ -97,7 +106,16 @@ function getRuleBasedResponse(message) {
 
 /**
  * POST /api/chatbot
- * Get AI-powered response to a medical question
+ * Handles conversational medical inquiries using a 3-tier fallback pipeline:
+ *  1. Microservice Query: Calls the local Python LangChain + Pinecone RAG microservice.
+ *  2. Cloud AI Fallback: Invokes Google Gemini Vision/Text with medical system instructions.
+ *  3. Rule-Based Fallback: Matches keywords against offline clinical knowledgebase entries.
+ *
+ * @name handleChatMessage
+ * @function
+ * @param {import('express').Request} req - Express request containing { message: string, history: Array }
+ * @param {import('express').Response} res - Express response with { success: boolean, reply: string, engine: string }
+ * @returns {Promise<void>}
  */
 router.post('/chatbot', async (req, res) => {
   try {
@@ -190,6 +208,13 @@ router.post('/chatbot', async (req, res) => {
 
 /**
  * GET /api/chatbot/info
+ * Returns metadata detailing active AI capabilities, service configuration, and legal disclaimers.
+ *
+ * @name getChatbotInfo
+ * @function
+ * @param {import('express').Request} req - Express request
+ * @param {import('express').Response} res - Express response describing engine configuration
+ * @returns {void}
  */
 router.get('/chatbot/info', (req, res) => {
   const hasApiKey =

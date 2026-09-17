@@ -1,9 +1,13 @@
 /**
  * LANDING PAGE COMPONENT
- * Modern, animated landing page with hero section and features */
-
-import React from 'react';
-
+ * Renders the modern landing page showcasing hero statistics, multimodal vision capabilities,
+ * architectural features, and diagnostic workflows.
+ *
+ * @component
+ * @param {Object} props
+ * @param {(page: 'home' | 'scan' | 'results') => void} props.onNavigate - Navigation callback to transition between views
+ * @returns {JSX.Element}
+ */
 function LandingPage({ onNavigate }) {
   return (
     <div className="landing-page">

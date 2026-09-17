@@ -49,13 +49,30 @@ print("[OK] Medical AI System Ready.\n")
 
 @app.route("/", methods=["GET"])
 def home():
-    """Render chat UI"""
+    """
+    Renders the standalone web chat interface.
+
+    Returns:
+        str: Rendered HTML template (index.html).
+    """
     return render_template("index.html")
 
 
 @app.route("/ask", methods=["POST"])
 def ask():
-    """Handle chat query from frontend"""
+    """
+    Handles incoming conversational queries via HTTP POST.
+    
+    Expects a JSON body containing:
+        - query (str): The user's input question.
+        - history (list of dict, optional): Past turns [{"role": "user"|"assistant", "content": "..."}].
+
+    Invokes the Pinecone + Groq LLaMA LangChain RAG pipeline with conversation history
+    and returns a structured JSON answer.
+
+    Returns:
+        tuple[flask.Response, int]: JSON response with {"answer": str} and HTTP status code.
+    """
     try:
         data = request.get_json()
         user_query = data.get("query", "").strip()
@@ -80,7 +97,7 @@ def ask():
         return jsonify({"answer": answer})
 
     except Exception as e:
-        # Print full traceback so it appears in Render logs
+        # Print full traceback so it appears in server logs
         print("=== /ask ERROR ===")
         traceback.print_exc()
         print("=== ERROR MSG ===", str(e))

@@ -28,6 +28,14 @@ DATA_DIR = "data"
 
 
 def main():
+    """
+    Main orchestration function to re-index medical literature into Pinecone:
+      1. Loads all PDF medical textbooks from the data directory.
+      2. Chunks documents into 1000-character segments with 200-character overlap.
+      3. Loads the BAAI/bge-small-en-v1.5 embedding model.
+      4. Creates or resets the Pinecone serverless vector index.
+      5. Embeds and upserts all chunks to Pinecone for dense vector retrieval.
+    """
     print("=" * 60)
     print("  Pinecone Re-Indexing — Improved Chunking Strategy")
     print("=" * 60)

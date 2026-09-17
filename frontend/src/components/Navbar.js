@@ -1,13 +1,23 @@
 /**
  * NAVBAR COMPONENT
- * Modern, animated navigation bar */
-
+ * Renders the top sticky glassmorphic navigation bar with logo, page links,
+ * smooth section scrolling, dark/light theme switch, and mobile drawer.
+ *
+ * @component
+ * @param {Object} props
+ * @param {string} props.currentPage - Name of the active route ('home' | 'scan' | 'results')
+ * @param {(page: string) => void} props.onNavigate - Page change handler
+ * @param {'light' | 'dark'} props.theme - Active visual theme
+ * @param {() => void} props.onToggleTheme - Callback toggling light/dark mode
+ * @returns {JSX.Element}
+ */
 import React, { useState, useEffect } from 'react';
 
 const Navbar = ({ currentPage, onNavigate, theme, onToggleTheme }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  // Monitor scroll position to apply elevated blurred header effect
   useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
@@ -17,6 +27,12 @@ const Navbar = ({ currentPage, onNavigate, theme, onToggleTheme }) => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  /**
+   * Smoothly scrolls to a landing page section (e.g. features, how-it-works).
+   * Switches to 'home' page first if the user is currently on scan/results.
+   *
+   * @param {string} selector - CSS selector of the destination element
+   */
   const scrollToSection = (selector) => {
     setMobileMenuOpen(false);
     if (currentPage !== 'home') {
@@ -35,6 +51,11 @@ const Navbar = ({ currentPage, onNavigate, theme, onToggleTheme }) => {
     }
   };
 
+  /**
+   * Closes mobile drawer and navigates to the specified view.
+   *
+   * @param {string} page - Target view identifier
+   */
   const handleNavClick = (page) => {
     setMobileMenuOpen(false);
     onNavigate(page);
