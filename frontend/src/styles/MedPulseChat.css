@@ -357,23 +357,28 @@
 
 /* APP HEADER */
 .medpulse-header {
-  height: 64px;
-  padding: 0 20px;
+  height: 68px;
+  min-height: 68px;
+  padding: 0 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   border-bottom: 1px solid var(--mp-border);
   background: var(--mp-surface);
   backdrop-filter: var(--mp-glass-blur);
   -webkit-backdrop-filter: var(--mp-glass-blur);
   flex-shrink: 0;
   z-index: 5;
+  box-sizing: border-box;
 }
 
 .header-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .header-brand-icon {
@@ -385,38 +390,79 @@
   display: grid;
   place-items: center;
   box-shadow: 0 4px 10px rgba(14, 165, 233, 0.25);
+  flex-shrink: 0;
+}
+
+.header-brand-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .header-brand-title {
-  font-size: 15.5px;
+  font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.2px;
   margin: 0;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-brand-sub {
   font-size: 11.5px;
   color: var(--mp-text3);
-  margin: 0;
+  margin: 2px 0 0 0;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .mp-model-badge {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 12px;
+  padding: 5px 10px;
   background: var(--mp-surface-subtle);
   border: 1px solid var(--mp-border);
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
   color: var(--mp-text2);
+  white-space: nowrap;
+}
+
+.badge-text-short {
+  display: none;
+}
+
+.badge-text-full {
+  display: inline;
+}
+
+/* In compressed floating window, prioritize brand title readability */
+.medpulse-modal.compressed .badge-text-full {
+  display: none;
+}
+
+.medpulse-modal.compressed .badge-text-short {
+  display: inline;
+}
+
+.medpulse-modal.compressed .mp-model-badge {
+  padding: 4px 8px;
+  font-size: 11px;
 }
 
 .mp-status-dot {
@@ -425,13 +471,14 @@
   border-radius: 50%;
   background: #10b981;
   box-shadow: 0 0 8px #10b981;
+  flex-shrink: 0;
 }
 
 /* Control Buttons (Expand, New, Close) */
 .btn-header-action {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   border: 1px solid var(--mp-border);
   background: var(--mp-surface);
   color: var(--mp-text2);
@@ -439,6 +486,7 @@
   place-items: center;
   cursor: pointer;
   transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .btn-header-action:hover {

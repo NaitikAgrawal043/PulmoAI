@@ -359,16 +359,17 @@ const Chatbot = ({ analysisResult }) => {
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                   </svg>
                 </div>
-                <div>
+                <div className="header-brand-info">
                   <h3 className="header-brand-title">MedPulse Assistant</h3>
                   <p className="header-brand-sub">Grounded in Medical Literature</p>
                 </div>
               </div>
 
               <div className="header-controls">
-                <div className="mp-model-badge">
+                <div className="mp-model-badge" title={aiEngine === 'python-medical-rag' ? 'Pinecone RAG + Groq LLaMA 3' : 'Medical Literature RAG'}>
                   <span className="mp-status-dot"></span>
-                  {aiEngine === 'python-medical-rag' ? 'Pinecone RAG + Groq' : 'Medical Literature RAG'}
+                  <span className="badge-text-full">{aiEngine === 'python-medical-rag' ? 'Pinecone RAG + Groq' : 'Medical Literature RAG'}</span>
+                  <span className="badge-text-short">{aiEngine === 'python-medical-rag' ? 'Pinecone RAG' : 'Medical RAG'}</span>
                 </div>
 
                 {/* New Chat Button (available in compressed mode too) */}
