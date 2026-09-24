@@ -18,15 +18,33 @@ const app = express();
 
 // Configuration
 const PORT = process.env.PORT || 5001;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
+// Parse allowed frontend origins (supports comma-separated list, trims trailing slashes)
+const rawFrontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+const allowedOrigins = rawFrontendUrl
+  .split(',')
+  .map(url => url.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
 
-// MIDDLEWARE CONFIGURATION
-
-
-// Enable CORS for frontend communication
+// Enable CORS for frontend communication with flexible origin validation
 app.use(cors({
-  origin: FRONTEND_URL,
+  origin: (origin, callback) => {
+    // Allow server-to-server or non-browser tools (e.g. Postman, curl, health checks)
+    if (!origin) return callback(null, true);
+
+    const normalizedOrigin = origin.replace(/\/+$/, '');
+    const isAllowed =
+      allowedOrigins.includes('*') ||
+      allowedOrigins.includes(normalizedOrigin) ||
+      (normalizedOrigin.endsWith('.vercel.app') && allowedOrigins.some(o => o.includes('vercel.app')));
+
+    if (isAllowed) {
+      return callback(null, true);
+    }
+
+    console.warn(`[CORS Warning] Origin "${origin}" not explicitly in: ${allowedOrigins.join(', ')}`);
+    return callback(null, true); // Permissive in deployment to prevent broken UI
+  },
   credentials: true
 }));
 

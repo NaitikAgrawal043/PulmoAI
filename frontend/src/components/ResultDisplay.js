@@ -14,6 +14,9 @@ import React from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
+const BACKEND_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, '');
+
 const ResultDisplay = ({ result, imagePath }) => {
   if (!result) return null;
 
@@ -147,7 +150,7 @@ const ResultDisplay = ({ result, imagePath }) => {
             <h3>Analyzed CT Scan</h3>
             <div className="image-wrapper">
               <img
-                src={`http://localhost:5001${imagePath}`}
+                src={imagePath && imagePath.startsWith('http') ? imagePath : `${BACKEND_BASE_URL}${imagePath}`}
                 alt="Analyzed CT Scan"
                 className="ct-scan-image"
               />

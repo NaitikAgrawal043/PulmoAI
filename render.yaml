@@ -1,0 +1,41 @@
+services:
+  # ----------------------------------------------------
+  # 1. PulmoAI Node.js Backend API
+  # ----------------------------------------------------
+  - type: web
+    name: pulmoai-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: RAG_SERVICE_URL
+        sync: false
+
+  # ----------------------------------------------------
+  # 2. PulmoAI Python Medical Chatbot RAG Service
+  # ----------------------------------------------------
+  - type: web
+    name: pulmoai-chatbot
+    runtime: python
+    plan: free
+    rootDir: medical-chatbot
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --timeout 120 --workers 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: PINECONE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
