@@ -47,14 +47,17 @@ print("[OK] Medical AI System Ready.\n")
 
 # ── Routes ──────────────────────────────────────────────────────────
 
-@app.route("/", methods=["GET"])
+@app.route("/", methods=["GET", "POST"])
 def home():
     """
-    Renders the standalone web chat interface.
+    Renders the standalone web chat interface on GET.
+    If called via POST, delegates to ask() to prevent 405 errors.
 
     Returns:
-        str: Rendered HTML template (index.html).
+        str or flask.Response: Rendered HTML template or JSON answer.
     """
+    if request.method == "POST":
+        return ask()
     return render_template("index.html")
 
 

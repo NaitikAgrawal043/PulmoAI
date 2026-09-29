@@ -11,7 +11,8 @@ const axios = require('axios');
 const { getChatbotResponse } = require('../utils/geminiAI');
 
 const router = express.Router();
-const RAG_SERVICE_URL = process.env.RAG_SERVICE_URL || 'http://localhost:5000/ask';
+const rawRagUrl = (process.env.RAG_SERVICE_URL || 'http://localhost:5000/ask').trim().replace(/\/+$/, '');
+const RAG_SERVICE_URL = rawRagUrl.endsWith('/ask') ? rawRagUrl : `${rawRagUrl}/ask`;
 
 // ==========================================
 // RULE-BASED FALLBACK KNOWLEDGE BASE
@@ -153,7 +154,7 @@ router.post('/chatbot', async (req, res) => {
       const ragResponse = await axios.post(
         RAG_SERVICE_URL,
         { query: message, history: formattedHistory },
-        { timeout: 3500 }
+        { timeout: 20000 }
       );
 
       if (ragResponse.data && ragResponse.data.answer) {
@@ -162,7 +163,8 @@ router.post('/chatbot', async (req, res) => {
         ragSuccess = true;
         console.log('✅ Response generated via Python Medical RAG service');
       }
-    } catch (_) {
+    } catch (ragError) {
+      console.warn(`⚠️ Python RAG microservice failed (${RAG_SERVICE_URL}):`, ragError.message);
       // Python RAG service is not running or timed out; continue to Gemini RAG
     }
 
