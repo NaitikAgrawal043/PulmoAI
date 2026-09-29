@@ -8,8 +8,13 @@ Usage:
     python store_index.py
 """
 
+import sys
 import os
+import time
 from dotenv import load_dotenv
+
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8')
 
 load_dotenv()
 
@@ -37,18 +42,18 @@ def main():
       5. Embeds and upserts all chunks to Pinecone for dense vector retrieval.
     """
     print("=" * 60)
-    print("  Pinecone Re-Indexing — Improved Chunking Strategy")
+    print("  Pinecone Re-Indexing - Improved Chunking Strategy")
     print("=" * 60)
 
     # 1. Load PDFs
     print(f"\n[1/5] Loading PDFs from '{DATA_DIR}'...")
     documents = load_pdf_files(DATA_DIR)
-    print(f"      → Loaded {len(documents)} pages")
+    print(f"      -> Loaded {len(documents)} pages")
 
     # 2. Split
     print("[2/5] Splitting documents (chunk_size=1000, overlap=200)...")
     chunks = text_split(documents)
-    print(f"      → Created {len(chunks)} chunks")
+    print(f"      -> Created {len(chunks)} chunks")
 
     # 3. Embeddings
     print("[3/5] Loading embedding model (BAAI/bge-small-en-v1.5)...")
@@ -60,10 +65,10 @@ def main():
 
     # Delete existing index to re-create with fresh data
     if INDEX_NAME in pc.list_indexes().names():
-        print(f"      → Deleting existing index '{INDEX_NAME}'...")
+        print(f"      -> Deleting existing index '{INDEX_NAME}'...")
         pc.delete_index(INDEX_NAME)
 
-    print(f"      → Creating new index '{INDEX_NAME}'...")
+    print(f"      -> Creating new index '{INDEX_NAME}'...")
     pc.create_index(
         name=INDEX_NAME,
         dimension=384,
@@ -74,6 +79,9 @@ def main():
         )
     )
 
+    while not pc.describe_index(INDEX_NAME).status['ready']:
+        time.sleep(1)
+
     # 5. Upsert
     print("[5/5] Embedding and upserting chunks to Pinecone...")
     vector_store = PineconeVectorStore.from_documents(
@@ -83,7 +91,7 @@ def main():
     )
 
     print(f"\n{'=' * 60}")
-    print(f"  ✓ Done! {len(chunks)} chunks indexed into '{INDEX_NAME}'")
+    print(f"  [OK] Done! {len(chunks)} chunks indexed into '{INDEX_NAME}'")
     print(f"{'=' * 60}")
 
 

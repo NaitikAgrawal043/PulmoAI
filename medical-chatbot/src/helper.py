@@ -126,14 +126,15 @@ def setup_pinecone(index_name, embedding):
 def load_llm():
     """
     Initializes the ChatOpenAI client pointed to Groq's high-speed inference endpoint.
-    Uses LLaMA-based compound models with low temperature (0.4) for clinical accuracy.
+    Uses LLaMA/GPT compound models with low temperature (0.4) for clinical accuracy.
 
     Returns:
         ChatOpenAI: Configured LLM runner for RAG generation.
     """
     api_key = os.getenv("GROQ_API_KEY")
+    model_name = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
     llm = ChatOpenAI(
-        model="groq/compound-mini",
+        model=model_name,
         api_key=api_key,
         base_url="https://api.groq.com/openai/v1",
         temperature=0.4,
