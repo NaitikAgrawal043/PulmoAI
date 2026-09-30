@@ -1,116 +1,19 @@
 /**
  * CHATBOT ROUTES
- * Intelligent medical chatbot powered by Google Gemini AI.
- *
- * Uses Gemini 1.5 Flash (FREE tier):
- *   - 15 req/min, 1,500 req/day, 1M tokens/month
- *   - Falls back to rule-based responses if API key is missing */
+ * Medical chatbot powered strictly by Pinecone + Groq LLaMA 3 LangChain RAG microservice.
+ */
 
 const express = require('express');
 const axios = require('axios');
-const { getChatbotResponse } = require('../utils/geminiAI');
 
 const router = express.Router();
 const rawRagUrl = (process.env.RAG_SERVICE_URL || 'http://localhost:5000/ask').trim().replace(/\/+$/, '');
 const RAG_SERVICE_URL = rawRagUrl.endsWith('/ask') ? rawRagUrl : `${rawRagUrl}/ask`;
 
-// ==========================================
-// RULE-BASED FALLBACK KNOWLEDGE BASE
-// (used when Gemini API is unavailable)
-// ==========================================
-
-const knowledgeBase = [
-  {
-    keywords: ['what is', 'lung nodule', 'pulmonary nodule'],
-    response:
-      'A lung nodule (or pulmonary nodule) is a small, round or oval-shaped growth in the lung. ' +
-      'Most lung nodules are benign (non-cancerous), but some can be malignant. They are typically ' +
-      'detected on chest X-rays or CT scans and are usually smaller than 3 cm in diameter.',
-  },
-  {
-    keywords: ['benign', 'non-cancerous', 'not cancer'],
-    response:
-      'Benign means non-cancerous. A benign nodule will not spread to other parts of the body. ' +
-      'However, it still requires monitoring through regular follow-up scans. Common causes include ' +
-      'old infections, inflammation, or harmless growths. Your doctor will recommend a monitoring schedule.',
-  },
-  {
-    keywords: ['malignant', 'cancerous', 'cancer', 'lung cancer'],
-    response:
-      'Malignant means cancerous. A malignant nodule has the potential to spread to other parts of the body. ' +
-      'If detected, further diagnostic tests such as biopsy, PET scan, or additional imaging will be needed. ' +
-      'Early detection significantly improves treatment outcomes. Please consult an oncologist immediately.',
-  },
-  {
-    keywords: ['causes', 'why', 'risk factors', 'smoking'],
-    response:
-      'Lung nodules can be caused by various factors including: smoking (primary risk factor), ' +
-      'exposure to asbestos or radon, previous lung infections (tuberculosis, fungal infections), ' +
-      'inflammation, scar tissue, or benign tumors.',
-  },
-  {
-    keywords: ['symptoms', 'signs', 'feel', 'pain'],
-    response:
-      'Most small lung nodules cause NO symptoms and are found incidentally during imaging for other reasons. ' +
-      'Larger nodules or cancerous ones may cause: persistent cough, coughing up blood, chest pain, ' +
-      'shortness of breath, unexplained weight loss, or fatigue.',
-  },
-  {
-    keywords: ['treatment', 'cure', 'therapy', 'surgery'],
-    response:
-      'Treatment depends on the nodule characteristics:\n\n' +
-      '• Benign small nodules: Regular monitoring with CT scans\n' +
-      '• Suspicious nodules: May require biopsy or PET scan\n' +
-      '• Malignant nodules: Surgery, radiation, chemotherapy, or targeted therapy',
-  },
-  {
-    keywords: ['ct scan', 'x-ray', 'imaging'],
-    response:
-      'A CT scan uses X-rays to create detailed cross-sectional images of your lungs. ' +
-      'It can detect nodules as small as 1-2mm. The scan is painless and typically takes 5-10 minutes.',
-  },
-  {
-    keywords: ['hello', 'hi', 'hey'],
-    response:
-      "Hello! I'm your AI Medical Assistant powered by Google Gemini. " +
-      'I can answer questions about pulmonary nodules, CT scans, treatment options, and more. ' +
-      'How can I help you today?',
-  },
-];
-
-const defaultFallbackResponse =
-  "I'm sorry, I couldn't process that with the AI engine right now. " +
-  'Please ask about lung nodules, symptoms, treatments, CT scans, or prevention strategies.';
-
-/**
- * Retrieves a rule-based clinical canned answer matching user keywords.
- * Serves as an offline safeguard when neither the Python RAG microservice nor the Gemini API are reachable.
- *
- * @name getRuleBasedResponse
- * @function
- * @param {string} message - Raw question asked by the user
- * @returns {string} Curated clinical response or default assistance disclaimer
- */
-function getRuleBasedResponse(message) {
-  const lower = message.toLowerCase().trim();
-  for (const entry of knowledgeBase) {
-    if (entry.keywords.some(k => lower.includes(k.toLowerCase()))) {
-      return entry.response;
-    }
-  }
-  return defaultFallbackResponse;
-}
-
-
-// CHATBOT ENDPOINT
-
-
 /**
  * POST /api/chatbot
- * Handles conversational medical inquiries using a 3-tier fallback pipeline:
- *  1. Microservice Query: Calls the local Python LangChain + Pinecone RAG microservice.
- *  2. Cloud AI Fallback: Invokes Google Gemini Vision/Text with medical system instructions.
- *  3. Rule-Based Fallback: Matches keywords against offline clinical knowledgebase entries.
+ * Handles conversational medical inquiries strictly via the Python RAG microservice.
+ * Preserves multi-turn conversation context and rejects fallback to generic vision LLMs.
  *
  * @name handleChatMessage
  * @function
@@ -138,79 +41,80 @@ router.post('/chatbot', async (req, res) => {
       });
     }
 
-    console.log(`💬 Chatbot question: "${message.substring(0, 60)}..."`);
+    console.log(`💬 Chatbot RAG query: "${message.substring(0, 60)}..." (History length: ${Array.isArray(history) ? history.length : 0})`);
 
-    let reply;
-    let engine;
+    // Normalize past chat history turns for the Python RAG microservice
+    const formattedHistory = (Array.isArray(history) ? history : [])
+      .map(h => {
+        if (!h || typeof h !== 'object') return null;
+        const role = (h.role === 'user' || h.type === 'user') ? 'user' : 'assistant';
+        const content = (h.content || h.text || '').trim();
+        return content ? { role, content } : null;
+      })
+      .filter(Boolean);
 
-    // 1. Attempt retrieval from Python Medical-Chatbot RAG service (Pinecone / LangChain)
-    let ragSuccess = false;
+    // Call Python Medical-Chatbot RAG microservice (Pinecone / LangChain / Groq LLaMA 3)
     try {
-      const formattedHistory = (history || []).map(h => ({
-        role: h.type === 'user' || h.role === 'user' ? 'user' : 'assistant',
-        content: h.text || h.content || ''
-      }));
-
       const ragResponse = await axios.post(
         RAG_SERVICE_URL,
-        { query: message, history: formattedHistory },
-        { timeout: 20000 }
+        { query: message.trim(), history: formattedHistory },
+        { 
+          timeout: 90000, // 90 seconds to tolerate cold starts on free tier hosting (Render/Koyeb)
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
 
       if (ragResponse.data && ragResponse.data.answer) {
-        reply = ragResponse.data.answer;
-        engine = 'python-medical-rag';
-        ragSuccess = true;
         console.log('✅ Response generated via Python Medical RAG service');
+        return res.json({
+          success: true,
+          reply: ragResponse.data.answer,
+          engine: 'python-medical-rag',
+          timestamp: new Date().toISOString(),
+        });
       }
+
+      throw new Error('RAG microservice returned an invalid or empty answer format.');
+
     } catch (ragError) {
-      console.warn(`⚠️ Python RAG microservice failed (${RAG_SERVICE_URL}):`, ragError.message);
-      // Python RAG service is not running or timed out; continue to Gemini RAG
-    }
+      console.error(`❌ Python RAG microservice failed (${RAG_SERVICE_URL}):`, ragError.message);
 
-    // 2. Fall back to Google Gemini with Medical-Chatbot literature guidelines
-    if (!ragSuccess) {
-      if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE') {
-        try {
-          reply = await getChatbotResponse(message, history);
-          engine = 'gemini-medical-rag';
-          console.log('✅ Gemini Medical RAG response generated');
-        } catch (aiError) {
-          console.warn('⚠️ Gemini chatbot error, falling back to rule-based:', aiError.message);
-          reply = getRuleBasedResponse(message);
-          engine = 'rule-based';
-        }
+      const isConnRefused = ragError.code === 'ECONNREFUSED';
+      const isTimeout = ragError.code === 'ECONNABORTED' || ragError.message?.toLowerCase().includes('timeout');
+
+      let diagnosticMessage = '';
+      if (isConnRefused) {
+        diagnosticMessage = `Could not connect to the Medical RAG microservice at ${RAG_SERVICE_URL}. If running locally, please start the Python service on port 5000 (cd medical-chatbot && python app.py). If deployed, please ensure the Python RAG web service is running and the backend RAG_SERVICE_URL environment variable is set to the public URL of your deployed chatbot service.`;
+      } else if (isTimeout) {
+        diagnosticMessage = `The Medical RAG service at ${RAG_SERVICE_URL} timed out after 90 seconds. If hosted on a free tier (such as Render), the service is likely waking up from spin-down. Please try asking again in a few moments.`;
       } else {
-        reply = getRuleBasedResponse(message);
-        engine = 'rule-based';
-        console.log('ℹ️  Using rule-based chatbot (no GEMINI_API_KEY set)');
+        diagnosticMessage = `Medical RAG microservice error: ${ragError.message}. Destination URL: ${RAG_SERVICE_URL}.`;
       }
-    }
 
-    res.json({
-      success: true,
-      reply,
-      engine,
-      timestamp: new Date().toISOString(),
-    });
+      return res.status(503).json({
+        success: false,
+        error: 'RAG_SERVICE_UNAVAILABLE',
+        reply: `⚠️ Medical RAG Service Error: ${diagnosticMessage}`,
+        engine: 'python-medical-rag',
+        ragServiceUrl: RAG_SERVICE_URL
+      });
+    }
 
   } catch (error) {
-    console.error('❌ Chatbot error:', error);
+    console.error('❌ Chatbot server error:', error);
     res.status(500).json({
       success: false,
       error: 'Chatbot error',
-      reply: "I'm having trouble processing your request. Please try again.",
+      reply: "An internal server error occurred while contacting the RAG system.",
     });
   }
 });
 
-
 // CHATBOT INFO
-
 
 /**
  * GET /api/chatbot/info
- * Returns metadata detailing active AI capabilities, service configuration, and legal disclaimers.
+ * Returns metadata detailing active AI capabilities and service configuration.
  *
  * @name getChatbotInfo
  * @function
@@ -219,24 +123,18 @@ router.post('/chatbot', async (req, res) => {
  * @returns {void}
  */
 router.get('/chatbot/info', (req, res) => {
-  const hasApiKey =
-    !!process.env.GEMINI_API_KEY &&
-    process.env.GEMINI_API_KEY !== 'YOUR_GEMINI_API_KEY_HERE';
-
   res.json({
     success: true,
     info: {
       name: 'MedPulse Medical RAG Assistant',
-      version: '3.0.0',
-      engine: 'Medical-Chatbot RAG (Pinecone / LangChain / Gemini)',
-      apiConfigured: hasApiKey,
+      version: '3.1.0',
+      engine: 'Pinecone Vector DB + Groq LLaMA 3 RAG Pipeline',
       ragServiceUrl: RAG_SERVICE_URL,
       capabilities: [
-        'Evidence-based Q&A from Medical Literature',
-        'CT Scan & Pulmonary Nodule Explanations',
-        'Radiological Findings Interpretation',
+        'Evidence-based Q&A from Medical Literature & Fleischner Guidelines',
+        'CT Scan & Pulmonary Nodule Clinical Interpretation',
         'Context-aware Multi-turn Conversations',
-        'Clinical Recommendations and Follow-up Pathways'
+        'Strict RAG Mode (No generic LLM fallback)'
       ],
       disclaimer: 'Educational and clinical diagnostic support only. Consult a physician for definitive diagnosis.'
     },
@@ -244,3 +142,4 @@ router.get('/chatbot/info', (req, res) => {
 });
 
 module.exports = router;
+

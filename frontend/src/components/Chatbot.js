@@ -199,7 +199,7 @@ const Chatbot = ({ analysisResult }) => {
     const titleSnippet = query.length > 28 ? query.substring(0, 28) + '...' : query;
 
     try {
-      const response = await sendChatMessage(query, newMessages);
+      const response = await sendChatMessage(query, messages);
       if (response.engine) setAiEngine(response.engine);
 
       const botReply = {
@@ -229,7 +229,7 @@ const Chatbot = ({ analysisResult }) => {
       console.error('Chat error:', error);
       const errorMsg = {
         role: 'bot',
-        content: "I'm having trouble connecting to the medical AI service. Please make sure the backend is active.",
+        content: error.message || "I'm having trouble connecting to the medical AI service. Please make sure the backend is active.",
         timestamp: new Date().toISOString(),
         isError: true
       };

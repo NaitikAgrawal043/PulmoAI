@@ -126,7 +126,7 @@ def setup_pinecone(index_name, embedding):
 def load_llm():
     """
     Initializes the ChatOpenAI client pointed to Groq's high-speed inference endpoint.
-    Uses LLaMA/GPT compound models with low temperature (0.4) for clinical accuracy.
+    Uses LLaMA/GPT compound models with sufficient token headroom (2048) for reasoning and multi-turn context.
 
     Returns:
         ChatOpenAI: Configured LLM runner for RAG generation.
@@ -138,8 +138,8 @@ def load_llm():
         api_key=api_key,
         base_url="https://api.groq.com/openai/v1",
         temperature=0.4,
-        max_tokens=512,
-        max_retries=1,
+        max_tokens=2048,
+        max_retries=2,
     )
     return llm
 
@@ -232,8 +232,23 @@ Assistant:"""
         query = inputs["input"]
         chat_history = inputs.get("chat_history", "")
 
+        # Context-aware vector retrieval:
+        # If there is past conversation history, anchor the vector retrieval query with the
+        # previous user prompt so follow-up questions (e.g. "Is it cancerous?", "How is it treated?")
+        # retrieve relevant context from Pinecone for that specific medical subject.
+        retrieval_query = query
+        if chat_history:
+            user_questions = [
+                line[5:].strip()
+                for line in chat_history.split("\n")
+                if line.startswith("User:")
+            ]
+            if user_questions:
+                last_user_q = user_questions[-1]
+                retrieval_query = f"{last_user_q} {query}".strip()
+
         # Retrieve relevant docs
-        docs = retriever.invoke(query)
+        docs = retriever.invoke(retrieval_query)
         context_str = format_docs(docs)
 
         # Build and invoke the prompt → LLM

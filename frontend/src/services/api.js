@@ -73,8 +73,17 @@ export const getPredictionHistory = async () => {
 // CHATBOT API
 
 
+// Direct Python Medical-Chatbot service URL (from medical-chatbot folder)
+const rawChatbotUrl = (
+  process.env.REACT_APP_CHATBOT_URL ||
+  process.env.REACT_APP_RAG_URL ||
+  'http://localhost:5000'
+).trim().replace(/\/+$/, '');
+const CHATBOT_ASK_URL = rawChatbotUrl.endsWith('/ask') ? rawChatbotUrl : `${rawChatbotUrl}/ask`;
+
 /**
  * Sends a query to the medical chatbot along with past conversation history.
+ * Directly calls the Python medical-chatbot service in medical-chatbot folder.
  *
  * @name sendChatMessage
  * @function
@@ -84,19 +93,51 @@ export const getPredictionHistory = async () => {
  */
 export const sendChatMessage = async (message, history = []) => {
   try {
-    // Convert history to the format Gemini expects (alternating user/model roles)
-    const geminiHistory = history
-      .filter(m => m.type === 'user' || m.type === 'bot')
-      .slice(-10) // Keep last 10 messages for context window
-      .map(m => ({
-        role: m.type === 'user' ? 'user' : 'model',
-        text: m.text,
-      }));
+    // Clean and normalize past chat history turns
+    const cleanHistory = (Array.isArray(history) ? history : [])
+      .map(m => {
+        if (!m || typeof m !== 'object') return null;
+        const role = (m.role === 'user' || m.type === 'user') ? 'user' : 'assistant';
+        const content = (m.content || m.text || '').trim();
+        // Skip empty turns and default welcome messages
+        if (!content) return null;
+        if (content.startsWith("Hello! I'm your MedPulse") || content.startsWith("Hello! I'm your Medical AI")) return null;
+        return { role, content };
+      })
+      .filter(Boolean);
 
-    const response = await apiClient.post('/chatbot', {
-      message,
-      history: geminiHistory,
-    });
+    // If the last message in history is the query being submitted now, exclude it
+    // so history strictly contains the preceding conversation context
+    const lastItem = cleanHistory[cleanHistory.length - 1];
+    const previousHistory = (lastItem && lastItem.role === 'user' && lastItem.content === message.trim())
+      ? cleanHistory.slice(0, -1)
+      : cleanHistory;
+
+    const payload = {
+      query: message.trim(),
+      message: message.trim(),
+      history: previousHistory.slice(-10), // Keep last 10 conversation turns
+    };
+
+    // 1. Direct call to medical-chatbot service in medical-chatbot folder
+    try {
+      const directResponse = await axios.post(CHATBOT_ASK_URL, payload, {
+        timeout: 90000,
+        headers: { 'Content-Type': 'application/json' }
+      });
+      if (directResponse.data && (directResponse.data.answer || directResponse.data.reply)) {
+        return {
+          success: true,
+          reply: directResponse.data.reply || directResponse.data.answer,
+          engine: directResponse.data.engine || 'python-medical-rag'
+        };
+      }
+    } catch (directError) {
+      console.warn(`Direct connection to medical-chatbot (${CHATBOT_ASK_URL}) failed, trying backend fallback:`, directError.message);
+    }
+
+    // 2. Fallback via backend proxy if direct connection was unreachable
+    const response = await apiClient.post('/chatbot', payload);
     return response.data;
   } catch (error) {
     console.error('Chatbot error:', error);
@@ -148,7 +189,11 @@ export const checkHealth = async () => {
 const handleAPIError = (error) => {
   if (error.response) {
     // Server responded with error status
-    const message = error.response.data?.message || error.response.data?.error || 'Server error';
+    const message =
+      error.response.data?.reply ||
+      error.response.data?.message ||
+      error.response.data?.error ||
+      'Server error';
     return new Error(message);
   } else if (error.request) {
     // Request made but no response received
