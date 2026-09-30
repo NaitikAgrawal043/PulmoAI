@@ -692,6 +692,202 @@
   color: var(--mp-text);
 }
 
+/* ==========================================================================
+   MARKDOWN RENDERED CONTENT (Rich Medical Text & Tables)
+   ========================================================================== */
+.mp-markdown-rendered {
+  width: 100%;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: inherit;
+}
+
+.mp-markdown-rendered p {
+  margin-top: 0;
+  margin-bottom: 12px;
+  line-height: 1.65;
+}
+
+.mp-markdown-rendered p:last-child {
+  margin-bottom: 0;
+}
+
+/* Headings */
+.mp-markdown-rendered h1,
+.mp-markdown-rendered h2,
+.mp-markdown-rendered h3,
+.mp-markdown-rendered h4,
+.mp-markdown-rendered h5,
+.mp-markdown-rendered h6 {
+  font-weight: 700;
+  color: var(--mp-text);
+  margin: 18px 0 8px;
+  line-height: 1.35;
+  letter-spacing: -0.2px;
+}
+
+.mp-markdown-rendered h1 { font-size: 1.25rem; }
+.mp-markdown-rendered h2 { font-size: 1.15rem; }
+.mp-markdown-rendered h3 { font-size: 1.05rem; }
+.mp-markdown-rendered h4 { font-size: 0.98rem; }
+
+.mp-markdown-rendered h1:first-child,
+.mp-markdown-rendered h2:first-child,
+.mp-markdown-rendered h3:first-child,
+.mp-markdown-rendered h4:first-child {
+  margin-top: 0;
+}
+
+/* Lists */
+.mp-markdown-rendered ul,
+.mp-markdown-rendered ol {
+  padding-left: 22px;
+  margin: 10px 0 14px;
+}
+
+.mp-markdown-rendered li {
+  margin-bottom: 6px;
+  line-height: 1.6;
+}
+
+.mp-markdown-rendered li:last-child {
+  margin-bottom: 0;
+}
+
+/* Emphasis, Strong, and Medical Disclaimers */
+.mp-markdown-rendered strong {
+  font-weight: 700;
+  color: var(--mp-text);
+}
+
+.mp-markdown-rendered em {
+  color: var(--mp-text2);
+  font-style: italic;
+}
+
+/* Blockquotes */
+.mp-markdown-rendered blockquote {
+  margin: 14px 0;
+  padding: 10px 16px;
+  border-left: 3px solid var(--mp-accent);
+  background: rgba(14, 165, 233, 0.06);
+  border-radius: 0 10px 10px 0;
+  color: var(--mp-text2);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.mp-markdown-rendered blockquote p {
+  margin-bottom: 0;
+}
+
+/* Horizontal Rules */
+.mp-markdown-rendered hr {
+  border: none;
+  border-top: 1px solid var(--mp-border);
+  margin: 18px 0;
+}
+
+/* Inline Code & Code Blocks */
+.mp-markdown-rendered code {
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border);
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-size: 13px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  color: var(--mp-accent);
+}
+
+.mp-markdown-rendered pre {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid var(--mp-border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  overflow-x: auto;
+  margin: 14px 0;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.mp-markdown-rendered pre code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: #f1f5f9;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* TABLES (Clean, Medical / Clinical Table Styling) */
+.mp-markdown-rendered table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 16px 0;
+  border: 1px solid var(--mp-border);
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 13.5px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  display: table;
+}
+
+@media (max-width: 768px) {
+  .mp-markdown-rendered table {
+    display: block;
+    overflow-x: auto;
+    white-space: normal;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+.mp-markdown-rendered thead {
+  background: var(--mp-surface-subtle);
+}
+
+.mp-markdown-rendered th {
+  padding: 12px 16px;
+  font-weight: 700;
+  text-align: left;
+  color: var(--mp-text);
+  border-bottom: 1px solid var(--mp-border);
+  border-right: 1px solid var(--mp-border);
+  letter-spacing: 0.2px;
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.mp-markdown-rendered td {
+  padding: 11px 16px;
+  color: var(--mp-text);
+  border-bottom: 1px solid var(--mp-border);
+  border-right: 1px solid var(--mp-border);
+  line-height: 1.55;
+  vertical-align: top;
+}
+
+.mp-markdown-rendered th:last-child,
+.mp-markdown-rendered td:last-child {
+  border-right: none;
+}
+
+.mp-markdown-rendered tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.mp-markdown-rendered tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.015);
+}
+
+[data-theme="dark"] .mp-markdown-rendered tbody tr:nth-child(even),
+.medpulse-modal.dark .mp-markdown-rendered tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.mp-markdown-rendered tbody tr:hover td {
+  background: rgba(14, 165, 233, 0.06);
+  transition: background 0.15s ease;
+}
+
 .mp-msg-footer {
   display: flex;
   align-items: center;

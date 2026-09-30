@@ -5,8 +5,15 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { marked } from 'marked';
 import { sendChatMessage } from '../services/api';
 import '../styles/MedPulseChat.css';
+
+// Configure marked with GitHub Flavored Markdown (tables, bold, breaks)
+marked.setOptions({
+  breaks: true,
+  gfm: true,
+});
 
 const DEFAULT_PROMPTS = [
   {
@@ -257,43 +264,25 @@ const Chatbot = ({ analysisResult }) => {
   );
 
   /**
-   * Parses markdown-like text elements (bullet points, headers, bold) into clean React DOM elements.
+   * Parses Markdown text (tables, lists, headers, bold, code) into styled, rich HTML.
    *
    * @param {string} content - Raw message text with markdown styling
-   * @returns {JSX.Element[]} Rendered DOM nodes
+   * @returns {JSX.Element} Rendered DOM container
    */
   const renderFormattedContent = (content) => {
-    const lines = content.split('\n');
-    return lines.map((line, idx) => {
-      const trimmed = line.trim();
-      if (trimmed.startsWith('* ') || trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
-        const bulletText = trimmed.replace(/^[*•-]\s*/, '');
-        return (
-          <li key={idx} dangerouslySetInnerHTML={{ __html: formatBold(bulletText) }} />
-        );
-      }
-      if (trimmed.startsWith('### ')) {
-        return <h4 key={idx} style={{ margin: '10px 0 4px', fontSize: '1.05em' }}>{trimmed.replace('### ', '')}</h4>;
-      }
-      if (!trimmed) {
-        return <div key={idx} style={{ height: '6px' }} />;
-      }
+    if (!content) return null;
+    try {
+      const html = marked.parse(content);
       return (
-        <p key={idx} dangerouslySetInnerHTML={{ __html: formatBold(trimmed) }} />
+        <div
+          className="mp-markdown-rendered"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
       );
-    });
-  };
-
-  /**
-   * Replaces markdown bold (**text**) and italic (*text*) syntax with semantic HTML tags.
-   *
-   * @param {string} str - Raw string
-   * @returns {string} HTML string with strong and em tags
-   */
-  const formatBold = (str) => {
-    return str
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>');
+    } catch (err) {
+      console.error('Error rendering markdown:', err);
+      return <div className="mp-markdown-rendered">{content}</div>;
+    }
   };
 
   return (
